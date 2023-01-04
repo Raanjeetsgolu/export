@@ -24,9 +24,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      # Authenticate with Azure using a service principal
-      - name: Authenticate with Azure
-        uses: azure/login@v1
+      # Authenticate with Azure container using a service principal
+      - name: Login to Azure Container Registry
+        uses: azure/docker-login@v1
         with:
           login-server: "${{env.ACR}}"
           username: "${{ secrets.ACR_USERNAME_SHAZDEVOPS }}"
