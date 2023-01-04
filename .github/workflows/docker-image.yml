@@ -52,5 +52,5 @@ jobs:
       # Push the image to the Azure container registry
       - name: Push image to Azure container registry
         run: |
-          az acr login --name ${{env.ACR}}
+          #az acr login --name ${{env.ACR}}
           docker push "${{env.ACR}}/shinternal/infer/${{matrix.image}}:${{ inputs.push_tag }}"
