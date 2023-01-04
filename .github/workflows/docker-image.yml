@@ -25,11 +25,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      # If the push_tag input is not provided, use the value of pull_tag as the push_tag
-      - name: Set default value for push_tag
-        if: inputs.push_tag == ''
-        run: |
-          echo "PUSH_TAG=${{ inputs.pull_tag }}" >> $GITHUB_ENV
       # Authenticate with Azure container using a service principal
       - name: Login to Azure Container Registry
         uses: azure/docker-login@v1
@@ -37,7 +32,11 @@ jobs:
           login-server: "${{env.ACR}}"
           username: "${{ secrets.ACR_USERNAME_SHAZDEVOPS }}"
           password: "${{ secrets.ACR_PASSWORD_SHAZDEVOPS }}"
-
+      # If the push_tag input is not provided, use the value of pull_tag as the push_tag
+      - name: Set default value for push_tag
+        if: inputs.push_tag == ''
+        run: |
+          echo "PUSH_TAG=${{ inputs.pull_tag }}" >> $GITHUB_ENV
       # Pull the specified image from the GitHub container registry
       # - name: Login to GitHub
       #   uses: docker/login-action@v2
