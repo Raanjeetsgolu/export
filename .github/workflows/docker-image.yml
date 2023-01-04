@@ -37,6 +37,11 @@ jobs:
         if: inputs.push_tag == ''
         run: |
           echo "PUSH_TAG=${{ inputs.pull_tag }}" >> $GITHUB_ENV
+          
+      # Retag the image with the value of the push_tag input
+      - name: Retag image
+        run: |
+          docker tag "${{env.GH_CR}}/${{env.GH_ORGANIZATION}}/shinternal/infer/${{matrix.image}}:${{ inputs.pull_tag }}" "${{env.ACR}}/shinternal/infer/${{matrix.image}}:${{ inputs.push_tag }}"
       # Pull the specified image from the GitHub container registry
       # - name: Login to GitHub
       #   uses: docker/login-action@v2
