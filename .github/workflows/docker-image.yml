@@ -59,7 +59,7 @@ jobs:
       # Retag the image with the value of the push_tag input
       - name: Retag image
         run: |
-          docker tag "${{env.GH_CR}}/${{env.GH_ORGANIZATION}}/shinternal/infer/${{matrix.image}}:${{ inputs.pull_tag }}" "${{env.ACR}}/shinternal/infer/${{matrix.image}}:${{ inputs.push_tag }}"
+          docker tag "${{env.GH_CR}}/${{env.GH_ORGANIZATION}}/shinternal/infer/${{matrix.image}}:${{ inputs.pull_tag }}" "${{env.ACR}}/shinternal/infer/${{matrix.image}}:${{ env.PUSH_TAG }}"
 
       # Push the image to the Azure container registry
       - name: Push image to Azure container registry
