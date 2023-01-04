@@ -37,8 +37,8 @@ jobs:
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
-          username: Raanjeetsgolu
-          password: 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      
+          username: "Raanjeetsgolu"
+          password: "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"     
       - name: Pull image from GitHub container registry
         run: |
           # echo "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" | docker login ghcr.io -u " ${{ github.actor }}" --password-stdin
