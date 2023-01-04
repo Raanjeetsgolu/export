@@ -3,27 +3,52 @@ name: Manual Workflow
 on:
   workflow_dispatch:
     inputs:
-      image_name:
-        description: "Enter the name of the image to pull from Docker"
+      pull_tag:
+        description: "Enter the tag of the image to pull from the GitHub container registry"
         required: true
-      registry_name:
-        description: "Enter the name of the registry to push the image to"
-        required: true
+      push_tag:
+        description: "Enter the tag of the image to push  Azure container registry (optional)"
+        
+env:
+  GH_CR: ghcr.io
+  GH_ORGANIZATION: smarthub-ai
+  ACR: shazdevops.azurecr.io
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix: 
+        image:  ['iotc-console-ui','iotc-deviceagent-uservice', 'iotc-devicesec-uservice', 'iotc-distribution-uservice' ,'iotc-repo-uservice','iotc-console-uservice', 'iotc-notifications-uservice', 'iotc-aggregator-uservice', 'iotc-alert-uservice', 'iotc-metricquery-uservice', 'iotc-metricingest-uservice', 'iotc-devicemgmt-uservice', 'iotc-lcm-uservice', 'iotc-iam-uservice', 'iotc-communicator-uservice', 'kapacitorinit', 'influxinit', 'mongo-seed', 'mongoinit','consulinit','iotc-assetsledger-uservice']
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      # Pull the specified image from Docker
-      - name: Pull image from Docker
-        run: |
-          docker pull ${{ inputs.image_name }}
+      # Authenticate with Azure using a service principal
+      - name: Authenticate with Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # Push the image to the specified registry
-      - name: Push image to registry
+      # Pull the specified image from the GitHub container registry
+      - name: Pull image from GitHub container registry
         run: |
-          docker tag ${{ inputs.image_name }} ${{ inputs.registry_name }}/${{ inputs.image_name }}
-          docker push ${{ inputs.registry_name }}/${{ inputs.image_name }}
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u " ${{ github.actor }}" --password-stdin
+          docker pull ${{env.GH_CR}}/${{env.GH_ORGANIZATION}}/shinternal/infer/${{matrix.image}}:${{ inputs.pull_tag }}
+
+      # If the push_tag input is not provided, use the value of pull_tag as the push_tag
+      - name: Set default value for push_tag
+        if: inputs.push_tag == ''
+        run: |
+          echo "::set-output name=push_tag::${{ inputs.pull_tag }}"
+
+      # Retag the image with the value of the push_tag input
+      - name: Retag image
+        run: |
+          docker tag "${{env.GH_CR}}/${{env.GH_ORGANIZATION}}/shinternal/infer/${{matrix.image}}:${{ inputs.pull_tag }}" "${{env.ACR}}/shinternal/infer/${{matrix.image}}:${{ inputs.push_tag }}"
+
+      # Push the image to the Azure container registry
+      - name: Push image to Azure container registry
+        run: |
+          az acr login --name ${{env.ACR}}
+          docker push "${{env.ACR}}/shinternal/infer/${{matrix.image}}:${{ inputs.push_tag }}"
