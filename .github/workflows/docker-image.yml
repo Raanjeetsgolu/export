@@ -28,7 +28,9 @@ jobs:
       - name: Authenticate with Azure
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          login-server: "${{env.ACR}}"
+          username: "${{ secrets.ACR_USERNAME_SHAZDEVOPS }}"
+          password: "${{ secrets.ACR_PASSWORD_SHAZDEVOPS }}"
 
       # Pull the specified image from the GitHub container registry
       - name: Pull image from GitHub container registry
