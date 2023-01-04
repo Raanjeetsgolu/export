@@ -1,0 +1,29 @@
+name: Manual Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_name:
+        description: "Enter the name of the image to pull from Docker"
+        required: true
+      registry_name:
+        description: "Enter the name of the registry to push the image to"
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      # Pull the specified image from Docker
+      - name: Pull image from Docker
+        run: |
+          docker pull ${{ inputs.image_name }}
+
+      # Push the image to the specified registry
+      - name: Push image to registry
+        run: |
+          docker tag ${{ inputs.image_name }} ${{ inputs.registry_name }}/${{ inputs.image_name }}
+          docker push ${{ inputs.registry_name }}/${{ inputs.image_name }}
