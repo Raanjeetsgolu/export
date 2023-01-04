@@ -35,7 +35,7 @@ jobs:
       # Pull the specified image from the GitHub container registry
       - name: Pull image from GitHub container registry
         run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u " ${{ github.actor }}" --password-stdin
+          echo "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" | docker login ghcr.io -u " ${{ github.actor }}" --password-stdin
           docker pull ${{env.GH_CR}}/${{env.GH_ORGANIZATION}}/shinternal/infer/${{matrix.image}}:${{ inputs.pull_tag }}
 
       # If the push_tag input is not provided, use the value of pull_tag as the push_tag
