@@ -1,0 +1,55 @@
+name: Pushing Image From shpvt01ACR  to shazdevopsACR
+
+on:
+  workflow_dispatch:
+    inputs:
+      pull_tag:
+        description: "Enter the tag of the image to pull from the GitHub container registry"
+        required: true
+      push_tag:
+        description: "Enter the tag of the image to push  Azure container registry (optional)"
+        
+env:
+  ACR_PULL: shpvt01.azurecr.io
+  ACR_PUSH: shazdevops.azurecr.io
+  PUSH_TAG: ${{ inputs.push_tag }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: 
+        image:  ['iotc-console-ui','iotc-deviceagent-uservice', 'iotc-devicesec-uservice', 'iotc-distribution-uservice' ,'iotc-repo-uservice','iotc-console-uservice', 'iotc-notifications-uservice', 'iotc-aggregator-uservice', 'iotc-alert-uservice', 'iotc-metricquery-uservice', 'iotc-metricingest-uservice', 'iotc-devicemgmt-uservice', 'iotc-lcm-uservice', 'iotc-iam-uservice', 'iotc-communicator-uservice', 'kapacitorinit', 'influxinit', 'mongo-seed', 'mongoinit','consulinit','iotc-assetsledger-uservice']
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      # Authenticate with Azure container using a service principal
+      - name: Login to Azure Container Registry
+        uses: azure/docker-login@v1
+        with:
+          login-server: "${{env.ACR_PULL}}"
+          username: "${{ secrets.ACR_USERNAME_SHAZDEVOPS }}"
+          password: "${{ secrets.ACR_PASSWORD_SHAZDEVOPS }}"
+      
+      - name: Pull image from ACR container registry
+        run: |
+          docker pull ${{env.ACR_PULL}}/shinternal/infer/${{matrix.image}}:${{ inputs.pull_tag }}
+
+      # If the push_tag input is not provided, use the value of pull_tag as the push_tag
+      - name: Set default value for push_tag
+        if: inputs.push_tag == ''
+        run: |
+          echo "PUSH_TAG=${{ inputs.pull_tag }}" >> $GITHUB_ENV
+
+
+      # Retag the image with the value of the push_tag input
+      - name: Retag image
+        run: |
+          docker tag "${{env.ACR_PULL}}/shinternal/infer/${{matrix.image}}:${{ inputs.pull_tag }}" "${{env.ACR_PUSH}}/shinternal/infer/${{matrix.image}}:${{ env.PUSH_TAG }}"
+
+      # Push the image to the Azure container registry
+      - name: Push image to Azure container registry
+        run: |
+          #az acr login --name ${{env.ACR_PUSH}}
+          docker push "${{env.ACR_PUSH}}/shinternal/infer/${{matrix.image}}:${{ env.PUSH_TAG  }}"
