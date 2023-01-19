@@ -1,32 +1,83 @@
-name: Manual Trigger Workflow
+name: Pushing Image From Smarthub subscription ACR  to Microsoft subscription ACR
 
 on:
   workflow_dispatch:
+    inputs:
+      pull_tag:
+        description: "Enter the tag of the image to pull from the Smarthub subscription ACR "
+        required: true
+      push_tag:
+        description: "Enter the tag of the image to push Microsoft subscription ACR (optional)"
+        
+env:
+  ACR_PULL: shpvt01.azurecr.io
+  ACR_PUSH: shazdevops.azurecr.io
+  PUSH_TAG: ${{ inputs.push_tag }}
 
 jobs:
   check_permission:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Check user permission
-      id: check_permission
-      uses: actions/checkout@v2
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    - name: Check if user is a member of devops team
-      run: |
-        USERNAME=$(jq -r '.actor' < ${{ toJson(steps.check_permission.outputs) }})
-        TEAM_ID=$(curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/orgs/ORGANIZATION_NAME/teams?name=devops | jq -r '.[0].id')
-        TEAM_MEMBERSHIP=$(curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/teams/$TEAM_ID/memberships/$USERNAME)
+      runs-on: ubuntu-latest
+      strategy:
+        matrix: 
+          image:  ['iotc-console-ui','iotc-deviceagent-uservice', 'iotc-devicesec-uservice', 'iotc-distribution-uservice' ,'iotc-repo-uservice','iotc-console-uservice', 'iotc-notifications-uservice', 'iotc-aggregator-uservice', 'iotc-alert-uservice', 'iotc-metricquery-uservice', 'iotc-metricingest-uservice', 'iotc-devicemgmt-uservice', 'iotc-lcm-uservice', 'iotc-iam-uservice', 'iotc-communicator-uservice', 'kapacitorinit', 'influxinit', 'mongo-seed', 'mongoinit','consulinit','iotc-assetsledger-uservice']
+      steps:
+      - name: Check user permission
+        id: check_permission
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check if user is a member of sh-devops team
+        run: |
+          USERNAME=$(jq -r '.actor' < ${{ toJson(steps.check_permission.outputs) }})
+          TEAM_ID=$(curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/orgs/ORGANIZATION_NAME/teams?name=sh-devops | jq -r '.[0].id')
+          TEAM_MEMBERSHIP=$(curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/teams/$TEAM_ID/memberships/$USERNAME)
 
-        if [ -z "$TEAM_MEMBERSHIP" ]; then
-          echo "User is not a member of devops team"
-          exit 1
-        else
-          echo "User is a member of devops team"
-        fi
-    - name: Workflow tasks
-      if: steps.check_permission.outputs.status == 'success'
-      run: |
-        echo "Running workflow tasks"
+          if [ -z "$TEAM_MEMBERSHIP" ]; then
+            echo "User is not a member of sh-devops team"
+            exit 1
+          else
+            echo "User is a member of devops team"
+          fi
+
+      - name: Checkout repository
+        if: steps.check_permission.outputs.status == 'success'
+        uses: actions/checkout@v2
+
+      # Authenticate with Azure container using a service principal
+      - name: Login to Smarthub subscription ACR
+        uses: azure/docker-login@v1
+        with:
+          login-server: "${{env.ACR_PULL}}"
+          username: "${{ secrets.ACR_USERNAME_SHPVT01 }}"
+          password: "${{ secrets.ACR_PASSWORD_SHPVT01 }}"
+      
+      - name: Pull image from ACR container registry
+        run: |
+          docker pull ${{env.ACR_PULL}}/shinternal/infer/${{matrix.image}}:${{ inputs.pull_tag }}
+
+      # If the push_tag input is not provided, use the value of pull_tag as the push_tag
+      - name: Set default value for push_tag
+        if: inputs.push_tag == ''
+        run: |
+          echo "PUSH_TAG=${{ inputs.pull_tag }}" >> $GITHUB_ENV
+
+
+      # Retag the image with the value of the push_tag input
+      - name: Retag image
+        run: |
+          docker tag "${{env.ACR_PULL}}/shinternal/infer/${{matrix.image}}:${{ inputs.pull_tag }}" "${{env.ACR_PUSH}}/shinternal/infer/${{matrix.image}}:${{ env.PUSH_TAG }}"
+
+      - name: Microsoft subscription ACR
+        uses: azure/docker-login@v1
+        with:
+          login-server: "${{env.ACR_PUSH}}"
+          username: "${{ secrets.ACR_USERNAME_SHAZDEVOPS1 }}"
+          password: "${{ secrets.ACR_PASSWORD_SHAZDEVOPS }}"
+
+      # Push the image to the Microsoft subscription ACR people only from sh-devops team can do this
+      - name: Push container image
+        run: |
+          echo "Pushing container image to Microsoft subscription ACR ..."
+          docker push "${{env.ACR_PUSH}}/shinternal/infer/${{matrix.image}}:${{ env.PUSH_TAG  }}"
