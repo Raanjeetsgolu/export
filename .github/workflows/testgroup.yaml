@@ -31,7 +31,7 @@ jobs:
       - name: Check if user is a member of sh-devops team
         run: |
           USERNAME=$(jq -r '.actor' < ${{ toJson(steps.check_permission.outputs) }})
-          TEAM_ID=$(curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/orgs/ORGANIZATION_NAME/teams?name=sh-devops | jq -r '.[0].id')
+          TEAM_ID=$(curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/orgs/smarthub.ai/teams?name=sh-devops | jq -r '.[0].id')
           TEAM_MEMBERSHIP=$(curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/teams/$TEAM_ID/memberships/$USERNAME)
 
           if [ -z "$TEAM_MEMBERSHIP" ]; then
